@@ -1,8 +1,9 @@
 {
-  "name": "crawler",
+  "name": "yan-scraper",
   "version": "0.0.1",
-  "description": "Just another Node.js crawling module.",
+  "description": "Just another Node.js scraping module.",
   "main": "index.js",
+  "repository": "https://github.com/CGavrila/yan-scraper",
   "scripts": {
     "start": "node index.js",
     "test": "grunt && mocha test/test.js"
