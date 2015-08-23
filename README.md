@@ -1,14 +1,14 @@
 Installaton
 ---
 
-```
+```javascript
 npm install yan-scraper
 ```
 
 Usage
 ---
 
-```
+```javascript
 var Scraper = require('yan-scraper');
 
 var scraper = Scraper.instance;
@@ -47,7 +47,7 @@ scraper.start();
 
 Templates can be added via the `scraper.addTemplate()` method and need to have `name`, `matchesFormat` and `callback` as fields. You can add as many templates to the scraper as you want. The one that matches a specific pattern in the queue will have its callback applied.
 
-```
+```javascript
 {
     name,          // String, unique identifier for the template
     matchesFormat, // Function with url as a parameter, return true if the url matches the template
@@ -63,7 +63,7 @@ Testing
 ---
 
 Still needs some work, but the current tests can be ran by doing:
-```
+```javascript
 npm test
 ```
 
