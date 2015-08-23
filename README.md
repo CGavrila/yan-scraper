@@ -47,6 +47,18 @@ scraper.start();
 
 Templates can be added via the `scraper.addTemplate()` method and need to have `name`, `matchesFormat` and `callback` as fields. You can add as many templates to the scraper as you want. The one that matches a specific pattern in the queue will have its callback applied.
 
+```
+{
+    name,          // String, unique identifier for the template
+    matchesFormat, // Function with url as a parameter, return true if the url matches the template
+    callback,      // Callback function with body and $ as paramters;
+                   //    - body is the response retrieved from the link
+                   //    - $ is cheerio
+    interval       // Number, the amount of miliseconds to wait between requests for the same template
+
+}
+```
+
 Testing
 ---
 
