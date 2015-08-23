@@ -1,10 +1,12 @@
-# Installaton
+Installaton
+---
 
 ```
 npm install yan-scraper
 ```
 
-# Usage
+Usage
+---
 
 ```
 var Scraper = require('yan-scraper');
@@ -45,7 +47,8 @@ scraper.start();
 
 Templates can be added via the `scraper.addTemplate()` method and need to have `name`, `matchesFormat` and `callback` as fields. You can add as many templates to the scraper as you want. The one that matches a specific pattern in the queue will have its callback applied.
 
-# Testing
+Testing
+---
 
 Still needs some work, but the current tests can be ran by doing:
 ```
@@ -54,6 +57,7 @@ npm test
 
 [grunt-cli](https://github.com/gruntjs/grunt-cli) is a prerequisite.
 
-## License
+License
+---
 
 MIT
