@@ -40,6 +40,10 @@ scraper.on('result', function(result) {
   console.log(result);
 });
 
+scraper.on('unmatched', function(url) {
+  console.log("Oops, there's an URL that couldn't be handled - " + url);
+});
+
 scraper.queue('http://www.imdb.com/title/tt0140688/'); // Will be handled by the IMDB template
 scraper.queue('http://www.amazon.co.uk/gp/product/B00E0YFOKI/'); // Will be handled by the Amazon template
 scraper.start();

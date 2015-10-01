@@ -1,6 +1,6 @@
 {
   "name": "yan-scraper",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Just another Node.js scraping module.",
   "main": "index.js",
   "repository": "https://github.com/CGavrila/yan-scraper",
