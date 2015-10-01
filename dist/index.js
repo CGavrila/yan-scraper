@@ -172,34 +172,39 @@ var Scraper = (function (_EventEmitter) {
                         return template.matchesFormat(nextURL);
                     });
 
-                    var interval = matchingTemplate.interval;
-
-                    /*
-                     * Computing how much time is needed until the next request for this specific
-                     * tuple (url, template) should happen.
-                     *
-                     * If the last request happened less time ago than the specified interval or didn't
-                     * happen at all until now, then run it straight away.
-                     *
-                     * Otherwise, set it to run after a while, so that it matches the minimum interval specified.
-                     */
-                    var waitTime = undefined;
-                    if (matchingTemplate.lastUsed) {
-                        if (matchingTemplate.lastUsed + interval < Date.now()) waitTime = 0;else waitTime = matchingTemplate.lastUsed + interval - Date.now();
+                    if (matchingTemplate === undefined) {
+                        that.emit('unmatched', nextURL);
                     } else {
-                        waitTime = 0;
+
+                        var interval = matchingTemplate.interval;
+
+                        /*
+                         * Computing how much time is needed until the next request for this specific
+                         * tuple (url, template) should happen.
+                         *
+                         * If the last request happened less time ago than the specified interval or didn't
+                         * happen at all until now, then run it straight away.
+                         *
+                         * Otherwise, set it to run after a while, so that it matches the minimum interval specified.
+                         */
+                        var waitTime = undefined;
+                        if (matchingTemplate.lastUsed) {
+                            if (matchingTemplate.lastUsed + interval < Date.now()) waitTime = 0;else waitTime = matchingTemplate.lastUsed + interval - Date.now();
+                        } else {
+                            waitTime = 0;
+                        }
+
+                        /* Keeping track of when the last request to a URL matching the current template
+                         * has been made. This is possible to be a date in the future and is NOT precise
+                         * to the millisecond, but quite close. */
+                        matchingTemplate.lastUsed = Date.now() + waitTime;
+
+                        debug('Next URL (' + waitTime + ' milliseconds wait time) is - ' + nextURL);
+
+                        setTimeout(function () {
+                            that._makeRequest(nextURL, matchingTemplate);
+                        }, waitTime);
                     }
-
-                    /* Keeping track of when the last request to a URL matching the current template
-                     * has been made. This is possible to be a date in the future and is NOT precise
-                     * to the millisecond, but quite close. */
-                    matchingTemplate.lastUsed = Date.now() + waitTime;
-
-                    debug('Next URL (' + waitTime + ' milliseconds wait time) is - ' + nextURL);
-
-                    setTimeout(function () {
-                        that._makeRequest(nextURL, matchingTemplate);
-                    }, waitTime);
                 })();
             }
 

@@ -9,6 +9,9 @@ describe('Scraper', function() {
 
     var validTemplate = {
         name: 'default',
+        matchesFormat: function(url) {
+            return url.toLowerCase().indexOf('example.com') !== -1;
+        },
         callback: function() { return 0; }
     };
 
@@ -65,6 +68,19 @@ describe('Scraper', function() {
         expect(scraper.getQueue().length).to.equal(2);
         expect(scraper.getQueue().shift()).to.equal('something');
         expect(scraper.getQueue().shift()).to.equal('something else');
+    });
+
+    it('can handle URLs in the queue not matching any template', function(done) {
+        var scraper = Scraper.instance;
+
+        var URLs = ['shouldnt match the matchFormat rules'];
+        scraper.queue(URLs);
+
+        scraper.start();
+
+        scraper.on('unmatched', function() {
+           done();
+        });
     });
 
 });
