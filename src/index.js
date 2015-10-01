@@ -156,7 +156,7 @@ class Scraper extends EventEmitter {
                  * Otherwise, set it to run after a while, so that it matches the minimum interval specified.
                  */
                 let waitTime;
-                if (matchingTemplate.lastUsed) {
+                if (matchingTemplate.lastUsed) { // basically it it's undefined
                     if ((matchingTemplate.lastUsed + interval) < Date.now())
                         waitTime = 0;
                     else
@@ -164,6 +164,8 @@ class Scraper extends EventEmitter {
                 } else {
                     waitTime = 0;
                 }
+
+                debug(matchingTemplate.name + ' - ' + matchingTemplate.lastUsed + ' - ' + waitTime);
 
                 /* Keeping track of when the last request to a URL matching the current template
                  * has been made. This is possible to be a date in the future and is NOT precise
@@ -179,7 +181,7 @@ class Scraper extends EventEmitter {
             }
         }
 
-        setTimeout(this._processNextInQueue.bind(this), 100);
+        setTimeout(this._processNextInQueue.bind(this), 0);
     }
 
     /**
@@ -198,7 +200,7 @@ class Scraper extends EventEmitter {
             if (!error && response.statusCode == 200) {
                 debug('Got results for ' + url);
                 let result = template.callback(body, cheerio.load(body));
-                that.emit('result', result);
+                that.emit('result', _.merge(result, { url: url, template: template }));
             }
         });
     }
