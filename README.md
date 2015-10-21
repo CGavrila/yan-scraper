@@ -17,7 +17,7 @@ scraper.addTemplate({
     matchesFormat: function(url) {
         return url.toLowerCase().indexOf('imdb.com') !== -1;
     },
-    callback: function(body, $) {
+    callback: function(url, body, $) {
         // $ is cheerio
 
         return { body: body, provider: 'IMDB' };
@@ -29,7 +29,7 @@ scraper.addTemplate({
     matchesFormat: function(url) {
         return url.toLowerCase().indexOf('amazon.co.uk') !== -1;
     },
-    callback: function(body, $) {
+    callback: function(url, body, $) {
         // $ is cheerio
 
         return { body: body, provider: 'Amazon' };
