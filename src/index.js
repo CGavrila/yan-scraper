@@ -199,7 +199,7 @@ class Scraper extends EventEmitter {
         request.get(url, function (error, response, body) {
             if (!error && response.statusCode == 200) {
                 debug('Got results for ' + url);
-                let result = template.callback(body, cheerio.load(body));
+                let result = template.callback(url, body, cheerio.load(body));
                 that.emit('result', _.merge(result, { url: url, template: template }));
             }
         });

@@ -83,4 +83,18 @@ describe('Scraper', function() {
         });
     });
 
+    it('provides the URL as the first argument of the callback', function(done) {
+        var scraper = Scraper.instance;
+
+        var URL = 'example.com/whatever';
+        scraper.queue(URL);
+
+        scraper.start();
+
+        scraper.on('unmatched', function(url, body, $) {
+            expect(url).to.equal(URL);
+            done();
+        });
+    });
+
 });
