@@ -26,7 +26,7 @@ var request = _interopRequireWildcard(_request);
 
 var _lodash = require('lodash');
 
-var _ = _interopRequireWildcard(_lodash);
+var _lodash2 = _interopRequireDefault(_lodash);
 
 var _cheerio = require('cheerio');
 
@@ -130,13 +130,27 @@ var Scraper = (function (_EventEmitter) {
         value: function queue(urls) {
             var _this = this;
 
-            if (_.isArray(urls)) {
+            if (_lodash2['default'].isArray(urls)) {
                 urls.forEach(function (url) {
                     _this.deque.push(url);
                 });
             } else {
                 this.deque.push(urls);
             }
+        }
+
+        /**
+         * Retrives the waiting times (in ms) for all templates.
+         */
+    }, {
+        key: 'getWaitTimes',
+        value: function getWaitTimes() {
+            var waitTimes = {};
+            _lodash2['default'].forEach(this.templates, function (template) {
+                var waitTime = template.lastUsed - Date.now() + template.interval || 0; // 0 for when the template was not used
+                waitTimes[template.name] = Math.max(waitTime, 0);
+            });
+            return waitTimes;
         }
 
         /**
@@ -168,7 +182,7 @@ var Scraper = (function (_EventEmitter) {
                     var nextURL = _this2.deque.shift();
 
                     /* Identify the proper callback to be used once the results come in. */
-                    var matchingTemplate = _.find(_this2.templates, function (template) {
+                    var matchingTemplate = _lodash2['default'].find(_this2.templates, function (template) {
                         return template.matchesFormat(nextURL);
                     });
 
@@ -232,7 +246,7 @@ var Scraper = (function (_EventEmitter) {
                 if (!error && response.statusCode == 200) {
                     debug('Got results for ' + url);
                     var result = template.callback(url, body, cheerio.load(body));
-                    that.emit('result', _.merge(result, { url: url, template: template }));
+                    that.emit('result', _lodash2['default'].merge(result, { url: url, template: template }));
                 }
             });
         }

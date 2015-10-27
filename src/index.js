@@ -2,7 +2,7 @@
 
 import Deque from 'collections/deque';
 import * as request from 'request';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import * as cheerio from 'cheerio';
 var debug = require('debug')('Scraper');
 var EventEmitter = require('events').EventEmitter;
@@ -111,6 +111,18 @@ class Scraper extends EventEmitter {
         else {
             this.deque.push(urls);
         }
+    }
+
+    /**
+     * Retrives the waiting times (in ms) for all templates.
+     */
+    getWaitTimes() {
+        let waitTimes = {};
+        _.forEach(this.templates, function(template) {
+            let waitTime = template.lastUsed - Date.now() + template.interval || 0; // 0 for when the template was not used
+            waitTimes[template.name] = Math.max(waitTime, 0);
+        });
+        return waitTimes;
     }
 
     /**

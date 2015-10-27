@@ -4,16 +4,32 @@ var expect = require('chai').expect;
 var Scraper = require('../dist/index.js');
 var sinon = require('sinon');
 var request = require('request');
+var nock = require('nock');
+var _ = require('lodash');
 
 describe('Scraper', function() {
 
     var validTemplate = {
         name: 'default',
+        interval: 2000,
         matchesFormat: function(url) {
             return url.toLowerCase().indexOf('example.com') !== -1;
         },
         callback: function() { return 0; }
     };
+
+    /* Both a before hook and a lesson on recursion */
+    before(function() {
+        nock('http://www.example.com').get('/').reply(200, {
+            message:
+                "- Nock nock! " +
+                "- Who's there? " +
+                "- Nock. " +
+                "- Nock who? " +
+                "- Nock nock! " +
+                "- Who's there? "
+        });
+    });
 
     beforeEach(function() {
         Scraper.destroyInstance();
@@ -86,7 +102,7 @@ describe('Scraper', function() {
     it('provides the URL as the first argument of the callback', function(done) {
         var scraper = Scraper.instance;
 
-        var URL = 'example.com/whatever';
+        var URL = 'http://www.example.com';
         scraper.queue(URL);
 
         scraper.start();
@@ -95,6 +111,45 @@ describe('Scraper', function() {
             expect(url).to.equal(URL);
             done();
         });
+    });
+
+    describe('getWaitTimes()', function() {
+
+        it('it returns wait times', function() {
+            var scraper = Scraper.instance;
+
+            scraper.addTemplate(validTemplate);
+
+            var times = 5;
+            for (var i=0; i<times; i++)
+                scraper.queue('http://www.example.com');
+
+            expect(scraper.getWaitTimes()).to.have.property(validTemplate.name);
+        });
+
+        /* Slightly flaky test since it's relying on setTimeout */
+        it('returns proper wait times', function(done) {
+
+            var scraper = Scraper.instance;
+
+            scraper.addTemplate(validTemplate);
+
+            expect(scraper.getWaitTimes()[validTemplate.name]).to.equal(0);
+
+            var times = 5;
+            for (var i=0; i<times; i++)
+                scraper.queue('http://www.example.com');
+
+            scraper.start();
+            scraper.on('result', function() {
+                setTimeout(function () {
+                    expect(scraper.getWaitTimes()[validTemplate.name]).to.be.above(scraper.getTemplates()[validTemplate.name].interval * (times - 1));
+                    done();
+                }, 100);
+            });
+
+        });
+
     });
 
 });
