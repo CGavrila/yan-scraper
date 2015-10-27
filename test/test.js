@@ -152,4 +152,72 @@ describe('Scraper', function() {
 
     });
 
+    describe('options', function() {
+
+        it('it uses options.interval if set', function() {
+            var scraper = Scraper.instance;
+            scraper.setOptions({
+                interval: 10000
+            });
+
+            scraper.addTemplate(validTemplate);
+
+            var times = 5;
+            for (var i=0; i<times; i++)
+                scraper.queue('http://www.example.com');
+
+            scraper.start();
+            scraper.on('result', function() {
+                setTimeout(function () {
+                    expect(scraper.getWaitTimes()[validTemplate.name]).to.be.above(30000);
+                    done();
+                }, 100);
+            });
+        });
+
+        it('it uses options.maxInterval if set', function() {
+            var scraper = Scraper.instance;
+            scraper.setOptions({
+                maxInterval: 10000
+            });
+
+            scraper.addTemplate(validTemplate);
+
+            var times = 5;
+            for (var i=0; i<times; i++)
+                scraper.queue('http://www.example.com');
+
+            scraper.start();
+            scraper.on('result', function() {
+                setTimeout(function () {
+                    expect(scraper.getWaitTimes()[validTemplate.name]).to.be.above(30000);
+                    done();
+                }, 100);
+            });
+        });
+
+        it('it uses options.interval over options.maxInterval if both are set', function() {
+            var scraper = Scraper.instance;
+            scraper.setOptions({
+                interval: 10000,
+                maxInterval: 100
+            });
+
+            scraper.addTemplate(validTemplate);
+
+            var times = 5;
+            for (var i=0; i<times; i++)
+                scraper.queue('http://www.example.com');
+
+            scraper.start();
+            scraper.on('result', function() {
+                setTimeout(function () {
+                    expect(scraper.getWaitTimes()[validTemplate.name]).to.be.above(30000);
+                    done();
+                }, 100);
+            });
+        });
+
+    });
+
 });

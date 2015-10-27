@@ -63,6 +63,16 @@ Templates can be added via the `scraper.addTemplate()` method and need to have `
 }
 ```
 
+Options can be passed by calling the `setOptions(options)` method on an instance or when doing `start()`. Currently supported options:
+```javascript
+{
+    maxInterval,   // Number, the maximum amount of miliseconds to wait between requests for the same template,
+                   // will cap any of the intervals defined for individual templates
+    interval,      // Number, absolute amount of miliseconds to wait between requests for the same template,
+                   // will completely override any interval defined for individual templates
+}
+```
+
 Testing
 ---
 

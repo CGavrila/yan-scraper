@@ -77,6 +77,7 @@ var Scraper = (function (_EventEmitter) {
 
         this.templates = {};
         this.deque = new _collectionsDeque2['default']();
+        this.options = {};
     }
 
     _createClass(Scraper, [{
@@ -107,6 +108,28 @@ var Scraper = (function (_EventEmitter) {
         key: 'getTemplates',
         value: function getTemplates() {
             return this.templates;
+        }
+
+        /**
+         * Sets the options for current instance.
+         *
+         * @param options {Object}
+         */
+    }, {
+        key: 'setOptions',
+        value: function setOptions(options) {
+            this.options = options;
+        }
+
+        /**
+         * Retrieves the current options used by the scraper.
+         *
+         * @returns options {Object}
+         */
+    }, {
+        key: 'getOptions',
+        value: function getOptions() {
+            return this.options;
         }
 
         /**
@@ -145,20 +168,26 @@ var Scraper = (function (_EventEmitter) {
     }, {
         key: 'getWaitTimes',
         value: function getWaitTimes() {
+            var that = this;
             var waitTimes = {};
             _lodash2['default'].forEach(this.templates, function (template) {
-                var waitTime = template.lastUsed - Date.now() + template.interval || 0; // 0 for when the template was not used
+                var waitTime = template.lastUsed - Date.now() + that._determineInterval(template) || 0; // 0 for when the template was not used
                 waitTimes[template.name] = Math.max(waitTime, 0);
             });
             return waitTimes;
         }
 
         /**
+         *
          * Starts the whole process of looping through the queue.
+         *
+         * @param options {Object} (optional)
          */
     }, {
         key: 'start',
-        value: function start() {
+        value: function start(options) {
+            if (options) this.options = options;
+
             setTimeout(this._processNextInQueue.bind(this), 0);
         }
 
@@ -190,7 +219,7 @@ var Scraper = (function (_EventEmitter) {
                         that.emit('unmatched', nextURL);
                     } else {
 
-                        var interval = matchingTemplate.interval;
+                        var interval = that._determineInterval(matchingTemplate);
 
                         /*
                          * Computing how much time is needed until the next request for this specific
@@ -249,6 +278,18 @@ var Scraper = (function (_EventEmitter) {
                     that.emit('result', _lodash2['default'].merge(result, { url: url, template: template }));
                 }
             });
+        }
+
+        /**
+         * Determines the interval to wait in-between requests for a particular template.
+         *
+         * @param template
+         * @private
+         */
+    }, {
+        key: '_determineInterval',
+        value: function _determineInterval(template) {
+            if (this.options.interval) return this.options.interval;else if (this.options.maxInterval) return Math.min(this.options.maxInterval, template.interval);else return template.interval;
         }
     }], [{
         key: 'destroyInstance',

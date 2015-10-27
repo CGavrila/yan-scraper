@@ -46,6 +46,7 @@ class Scraper extends EventEmitter {
 
         this.templates = {};
         this.deque = new Deque();
+        this.options = {};
     }
 
     static get instance() {
@@ -89,6 +90,24 @@ class Scraper extends EventEmitter {
     }
 
     /**
+     * Sets the options for current instance.
+     *
+     * @param options {Object}
+     */
+    setOptions(options) {
+        this.options = options;
+    }
+
+    /**
+     * Retrieves the current options used by the scraper.
+     *
+     * @returns options {Object}
+     */
+    getOptions() {
+        return this.options;
+    }
+
+    /**
      * Retrieves the current queue.
      *
      * @returns {*} - The queue.
@@ -117,18 +136,24 @@ class Scraper extends EventEmitter {
      * Retrives the waiting times (in ms) for all templates.
      */
     getWaitTimes() {
+        var that = this;
         let waitTimes = {};
         _.forEach(this.templates, function(template) {
-            let waitTime = template.lastUsed - Date.now() + template.interval || 0; // 0 for when the template was not used
+            let waitTime = (template.lastUsed - Date.now() + that._determineInterval(template)) || 0; // 0 for when the template was not used
             waitTimes[template.name] = Math.max(waitTime, 0);
         });
         return waitTimes;
     }
 
     /**
+     *
      * Starts the whole process of looping through the queue.
+     *
+     * @param options {Object} (optional)
      */
-    start() {
+    start(options) {
+        if (options) this.options = options;
+
         setTimeout(this._processNextInQueue.bind(this), 0);
     }
 
@@ -156,7 +181,7 @@ class Scraper extends EventEmitter {
             }
             else {
 
-                let interval = matchingTemplate.interval;
+                let interval = that._determineInterval(matchingTemplate);
 
                 /*
                  * Computing how much time is needed until the next request for this specific
@@ -215,6 +240,21 @@ class Scraper extends EventEmitter {
                 that.emit('result', _.merge(result, { url: url, template: template }));
             }
         });
+    }
+
+    /**
+     * Determines the interval to wait in-between requests for a particular template.
+     *
+     * @param template
+     * @private
+     */
+    _determineInterval(template) {
+        if (this.options.interval)
+            return this.options.interval;
+        else if (this.options.maxInterval)
+            return Math.min(this.options.maxInterval, template.interval);
+        else
+            return template.interval;
     }
 }
 
