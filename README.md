@@ -70,15 +70,23 @@ Queueing URLs for the scraper to process can be done via the `scraper.queue(url 
 
 However, the queue can be jumped by doing `scraper.queue(url, 1)`. This will result in the URL provided to be added in a separate queue which only keeps track of the priority URLs and will still respect the interval, but will overalap with the regular queue. The amortized average request interval between the regular and priority queues will be equal to the `interval`. 
 
-Example:
+**Example**:
 ```
 var scraper = Scraper.instance;
+scraper.setOptions({ interval: 2000 });
 scraper.queue('http://www.example.com/1', 0); 
-scraper.queue('http://www.example.com/2', );
-scraper.queue('http://www.example.com/2', );
-scraper.queue('http://www.example.com/2', );
-scraper.queue('http://www.example.com/2', );
+scraper.queue('http://www.example.com/2', 0);
+scraper.queue('http://www.example.com/3', 1);
+scraper.queue('http://www.example.com/4', 1);
+scraper.queue('http://www.example.com/5', 0);
 scraper.start();
+```
+
+will result in the links being ran approximately like:
+```
+     0ms - http://www.example.com/1, http://www.example.com/3
++ 2000ms - http://www.example.com/2, http://www.example.com/4
++ 4000ms - http://www.example.com/5
 ```
 
 #### Options
