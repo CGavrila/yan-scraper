@@ -147,18 +147,21 @@ var Scraper = (function (_EventEmitter) {
          * Adds one or multiple URLs to the queue.
          *
          * @param urls {Array|String} - An array of URLs or a single URL as a string.
+         * @param priority {Number} - 0 or 1; if 1, then it will be immediately scraped, otherwise it will get in line.
          */
     }, {
         key: 'queue',
-        value: function queue(urls) {
+        value: function queue(urls, priority) {
             var _this = this;
+
+            if (!priority) priority = 0;
 
             if (_lodash2['default'].isArray(urls)) {
                 urls.forEach(function (url) {
-                    _this.deque.push(url);
+                    _this.deque.push({ url: url, priority: priority });
                 });
             } else {
-                this.deque.push(urls);
+                this.deque.push({ url: urls, priority: priority });
             }
         }
 
@@ -208,7 +211,10 @@ var Scraper = (function (_EventEmitter) {
 
             if (this.deque.length > 0) {
                 (function () {
-                    var nextURL = _this2.deque.shift();
+                    var queueEntry = _this2.deque.shift();
+
+                    var nextURL = queueEntry.url;
+                    var nextURLPriority = queueEntry.priority;
 
                     /* Identify the proper callback to be used once the results come in. */
                     var matchingTemplate = _lodash2['default'].find(_this2.templates, function (template) {
@@ -223,17 +229,22 @@ var Scraper = (function (_EventEmitter) {
 
                         /*
                          * Computing how much time is needed until the next request for this specific
-                         * tuple (url, template) should happen.
+                         * tuple (url, template) should happen. However, this keeps track of two different
+                         * streams: the priority URLs and the regulars. In both cases, it will try to
+                         * respect the interval set via the template or this.options.
                          *
-                         * If the last request happened less time ago than the specified interval or didn't
-                         * happen at all until now, then run it straight away.
+                         * Assuming we have the following URLs coming in at the same time- format url(priority):
                          *
-                         * Otherwise, set it to run after a while, so that it matches the minimum interval specified.
+                         * url1(0), url2(0), url3(1), url4(1)
+                         *
+                         * Then url1 and url3 will execute at the same time, and so will url2 and url4, each pair
+                         * after the interval set via templates or this.options.
                          */
                         var waitTime = undefined;
-                        if (matchingTemplate.lastUsed) {
-                            // basically it it's undefined
+                        if (nextURLPriority === 0 && matchingTemplate.lastUsed) {
                             if (matchingTemplate.lastUsed + interval < Date.now()) waitTime = 0;else waitTime = matchingTemplate.lastUsed + interval - Date.now();
+                        } else if (nextURLPriority !== 0 && matchingTemplate.lastUsedPriority) {
+                            if (matchingTemplate.lastUsedPriority + interval < Date.now()) waitTime = 0;else waitTime = matchingTemplate.lastUsedPriority + interval - Date.now();
                         } else {
                             waitTime = 0;
                         }
@@ -242,10 +253,26 @@ var Scraper = (function (_EventEmitter) {
 
                         /* Keeping track of when the last request to a URL matching the current template
                          * has been made. This is possible to be a date in the future and is NOT precise
-                         * to the millisecond, but quite close. */
+                         * to the millisecond, but quite close.
+                         *
+                         * There are two cases here:
+                         *  - the link is a priority (priority > 0)
+                         *  - the link is a regular link
+                         *
+                         *  If the link is either one, it will update lastUsed because this will help with
+                         *  balancing the number of requests to being approximately the average imposed by
+                         *  the template's interval.
+                         *
+                         *  If the link has priority > 0, then it will update lastUsedPriority too because
+                         *  we don't want priority links to start 100 requests at the same time.
+                         */
                         matchingTemplate.lastUsed = Date.now() + waitTime;
+                        if (nextURLPriority !== 0) matchingTemplate.lastUsedPriority = Date.now() + waitTime;
 
                         debug('Next URL (' + waitTime + ' milliseconds wait time) is - ' + nextURL);
+
+                        /*  */
+                        if (nextURLPriority > 0) waitTime = 0;
 
                         setTimeout(function () {
                             that._makeRequest(nextURL, matchingTemplate);
@@ -272,7 +299,7 @@ var Scraper = (function (_EventEmitter) {
             var that = this;
 
             request.get(url, function (error, response, body) {
-                if (!error && response.statusCode == 200) {
+                if (!error && response.statusCode === 200) {
                     debug('Got results for ' + url);
                     var result = template.callback(url, body, cheerio.load(body));
                     that.emit('result', _lodash2['default'].merge(result, { url: url, template: template }));

@@ -74,7 +74,7 @@ describe('Scraper', function() {
         expect(scraper.getQueue().length).to.equal(0);
         scraper.queue('whatever');
         expect(scraper.getQueue().length).to.equal(1);
-        expect(scraper.getQueue().shift()).to.equal('whatever');
+        expect(scraper.getQueue().shift().url).to.equal('whatever');
     });
 
     it('can add array of urls to the queue', function() {
@@ -82,8 +82,8 @@ describe('Scraper', function() {
         expect(scraper.getQueue().length).to.equal(0);
         scraper.queue(['something', 'something else']);
         expect(scraper.getQueue().length).to.equal(2);
-        expect(scraper.getQueue().shift()).to.equal('something');
-        expect(scraper.getQueue().shift()).to.equal('something else');
+        expect(scraper.getQueue().shift().url).to.equal('something');
+        expect(scraper.getQueue().shift().url).to.equal('something else');
     });
 
     it('can handle URLs in the queue not matching any template', function(done) {
@@ -213,6 +213,44 @@ describe('Scraper', function() {
             scraper.on('result', function() {
                 setTimeout(function () {
                     expect(scraper.getWaitTimes()[validTemplate.name]).to.be.above(30000);
+                    done();
+                }, 100);
+            });
+        });
+
+    });
+
+    describe('priorities', function() {
+
+        var priorityTime;
+
+        nock('http://www.example.com').get('/').reply(200, {});
+        nock('http://www.example.com').get('/priority').reply(200, function() {
+            priorityTime = Date.now();
+        });
+
+        it('it uses options.interval if set', function(done) {
+            this.timeout(30000);
+
+            var initTime = Date.now();
+
+            var scraper = Scraper.instance;
+            scraper.setOptions({
+                interval: 2000
+            });
+
+            scraper.addTemplate(validTemplate);
+
+            for (let i=0; i<100; i++)
+                scraper.queue('http://www.example.com');
+
+            for (let i=0; i<3; i++)
+                scraper.queue('http://www.example.com/priority', 1);
+
+            scraper.start();
+            scraper.on('result', function() {
+                setTimeout(function () {
+                    expect(priorityTime - initTime).to.be.below(500);
                     done();
                 }, 100);
             });
