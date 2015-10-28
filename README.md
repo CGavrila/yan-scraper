@@ -49,6 +49,8 @@ scraper.queue('http://www.amazon.co.uk/gp/product/B00E0YFOKI/'); // Will be hand
 scraper.start();
 ```
 
+#### Templates
+
 Templates can be added via the `scraper.addTemplate()` method and need to have `name`, `matchesFormat` and `callback` as fields. You can add as many templates to the scraper as you want. The one that matches a specific pattern in the queue will have its callback applied.
 
 ```javascript
@@ -63,6 +65,23 @@ Templates can be added via the `scraper.addTemplate()` method and need to have `
 }
 ```
 
+#### Priorities
+Queueing URLs for the scraper to process can be done via the `scraper.queue(url [, priority=0])` function. Generally, this will mean that it will get processed depending on how many URLs are in the queue and what the interval defined in the `template` or `options` is.
+
+However, the queue can be jumped by doing `scraper.queue(url, 1)`. This will result in the URL provided to be added in a separate queue which only keeps track of the priority URLs and will still respect the interval, but will overalap with the regular queue. The amortized average request interval between the regular and priority queues will be equal to the `interval`. 
+
+Example:
+```
+var scraper = Scraper.instance;
+scraper.queue('http://www.example.com/1', 0); 
+scraper.queue('http://www.example.com/2', );
+scraper.queue('http://www.example.com/2', );
+scraper.queue('http://www.example.com/2', );
+scraper.queue('http://www.example.com/2', );
+scraper.start();
+```
+
+#### Options
 Options can be passed by calling the `setOptions(options)` method on an instance or when doing `start()`. Currently supported options:
 ```javascript
 {
