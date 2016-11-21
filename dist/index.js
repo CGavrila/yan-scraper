@@ -13,20 +13,12 @@ var events_1 = require('events');
 var scraperDebug = debug('yan-scraper');
 var Scraper = (function (_super) {
     __extends(Scraper, _super);
-    function Scraper() {
+    function Scraper(options) {
         _super.call(this);
         this.templates = {};
         this.queue = Immutable.List();
-        if (Scraper._instance) {
-            throw new Error("Error: Instantiation failed - use Scraper.getInstance() instead of new.");
-        }
+        this.options = options;
     }
-    Scraper.getInstance = function () {
-        return this._instance || (this._instance = new this());
-    };
-    Scraper.destroyInstance = function () {
-        this._instance = null;
-    };
     Scraper.prototype.addTemplate = function (template) {
         var templateWrapper = template;
         if (!templateWrapper.name)

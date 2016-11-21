@@ -70,25 +70,13 @@ export interface ScraperOptions {
  */
 class Scraper<T> extends EventEmitter {
 
-    private static _instance;
     private templates: { [name: string]: Template<T> } = {};
     private options: ScraperOptions;
     private queue: Immutable.List<QueueEntry> = Immutable.List<QueueEntry>();
 
-    constructor() {
+    constructor(options: ScraperOptions) {
         super();
-        if(Scraper._instance){
-            throw new Error("Error: Instantiation failed - use Scraper.getInstance() instead of new.");
-        }
-    }
-
-    public static getInstance()  {
-        return this._instance || (this._instance = new this());
-
-    }
-
-    public static destroyInstance(): void {
-        this._instance = null;
+        this.options = options;
     }
 
     /**

@@ -21,13 +21,10 @@ export interface ScraperOptions {
     maxInterval?: number;
 }
 declare class Scraper<T> extends EventEmitter {
-    private static _instance;
     private templates;
     private options;
     private queue;
-    constructor();
-    static getInstance(): any;
-    static destroyInstance(): void;
+    constructor(options: ScraperOptions);
     addTemplate(template: Template<T>): void;
     getTemplates(): {
         [name: string]: Template<T>;
