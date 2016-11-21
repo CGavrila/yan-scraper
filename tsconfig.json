@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "listFiles": true,
+    "module":  "commonjs",
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "sourceRoot": "./src",
+    "outDir": "./dist",
+    "declaration": true,
+    "moduleResolution": "node"
+  },
+  "exclude": [
+    "node_modules",
+    "typings",
+    "dist"
+  ]
+}

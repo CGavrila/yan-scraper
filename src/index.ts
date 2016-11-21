@@ -1,13 +1,44 @@
+/// <reference path="../typings/index.d.ts" />
+
 'use strict';
 
-import Deque from 'collections/deque';
+import * as Immutable from 'immutable';
 import * as request from 'request';
-import _ from 'lodash';
+import * as _ from 'lodash';
 import * as cheerio from 'cheerio';
-var debug = require('debug')('Scraper');
-var EventEmitter = require('events').EventEmitter;
+import * as debug from 'debug';
+import {EventEmitter} from 'events';
 
-let _singleton = Symbol();
+let scraperDebug = debug('yan-scraper');
+
+/**
+ * Used as a template for the websites that will be polled.
+ */
+export interface Template<T> {
+    name: string;
+    url?: string;
+    matchesFormat: (url: string) => boolean;
+    interval?: number;
+    callback: (url: string, body: any, $: CheerioStatic) => T;
+}
+
+export interface TemplateWrapper<T> extends Template<T> {
+    lastUsed: number;
+    lastUsedPriority: number;
+}
+
+/**
+ * Used as a template for the websites that will be polled.
+ */
+export interface QueueEntry {
+    url: string;
+    priority: boolean;
+}
+
+export interface ScraperOptions {
+    interval: number;
+    maxInterval?: number;
+}
 
 /**
  *
@@ -37,31 +68,27 @@ let _singleton = Symbol();
  * ------------------------------------------------------------------------
  *
  */
-class Scraper extends EventEmitter {
+class Scraper<T> extends EventEmitter {
 
-    constructor(singletonToken) {
+    private static _instance;
+    private templates: { [name: string]: Template<T> } = {};
+    private options: ScraperOptions;
+    private queue: Immutable.List<QueueEntry> = Immutable.List<QueueEntry>();
+
+    constructor() {
         super();
-        if (_singleton !== singletonToken)
-            throw new Error('Scraper is a singleton class, cannot instantiate directly.');
-
-        this.templates = {};
-        this.deque = new Deque();
-        this.options = {};
+        if(Scraper._instance){
+            throw new Error("Error: Instantiation failed - use Scraper.getInstance() instead of new.");
+        }
     }
 
-    static get instance() {
-        if(!this[_singleton])
-            this[_singleton] = new Scraper(_singleton);
+    public static getInstance()  {
+        return this._instance || (this._instance = new this());
 
-        return this[_singleton]
     }
 
-    /**
-     * Used to destroy the current instance of the class (it's a Singleton).
-     * Particularly useful for testing.
-     */
-    static destroyInstance() {
-        this[_singleton] = null;
+    public static destroyInstance(): void {
+        this._instance = null;
     }
 
     /**
@@ -69,15 +96,17 @@ class Scraper extends EventEmitter {
      *
      * @param {object} template - The properties of the template, including name, matchesFormat, interval and callback.
      */
-    addTemplate(template) {
-        if (!template.name) throw new Error('Template name is missing.');
-        if (!template.callback) throw new Error('Template callback is missing.');
-        if (!template.matchesFormat) throw new Error('Template matchesFormat property is missing.');
-        if (template.name in this.templates) throw new Error('Template already exists.');
+    public addTemplate(template: Template<T>) {
+        let templateWrapper: TemplateWrapper<T> = <TemplateWrapper<T>> template;
 
-        if (!('interval' in template)) template.interval = 0;
+        if (!templateWrapper.name) throw new Error('Template name is missing.');
+        if (!templateWrapper.callback) throw new Error('Template callback is missing.');
+        if (!templateWrapper.matchesFormat) throw new Error('Template matchesFormat property is missing.');
+        if (templateWrapper.name in this.templates) throw new Error('Template already exists.');
 
-        this.templates[template.name] = template;
+        if (!('interval' in templateWrapper)) templateWrapper.interval = 0;
+
+        this.templates[templateWrapper.name] = templateWrapper;
     }
 
     /**
@@ -85,7 +114,7 @@ class Scraper extends EventEmitter {
      *
      * @returns {{}|*} - An array of objects.
      */
-    getTemplates() {
+    public getTemplates(): { [name: string]: Template<T> } {
         return this.templates;
     }
 
@@ -94,7 +123,7 @@ class Scraper extends EventEmitter {
      *
      * @param options {Object}
      */
-    setOptions(options) {
+    public setOptions(options: ScraperOptions) {
         this.options = options;
     }
 
@@ -103,7 +132,7 @@ class Scraper extends EventEmitter {
      *
      * @returns options {Object}
      */
-    getOptions() {
+    public getOptions(): ScraperOptions {
         return this.options;
     }
 
@@ -112,37 +141,37 @@ class Scraper extends EventEmitter {
      *
      * @returns {*} - The queue.
      */
-    getQueue() {
-        return this.deque;
+    public getQueue(): Immutable.List<QueueEntry> {
+        return this.queue;
     }
 
     /**
      * Adds one or multiple URLs to the queue.
      *
-     * @param urls {Array|String} - An array of URLs or a single URL as a string.
-     * @param priority {Number} - 0 or 1; if 1, then it will be immediately scraped, otherwise it will get in line.
+     * @param url
+     * @param priority
      */
-    queue(urls, priority) {
-        if (!priority) priority = 0;
+    public addToQueue(url: string, priority?: boolean): void {
+        if (!priority) priority = false;
 
-        if (_.isArray(urls)) {
-            urls.forEach(url => {
-               this.deque.push({url: url, priority: priority});
+        if (_.isArray(url)) {
+            _.forEach(url, (url) => {
+               this.queue.push(<QueueEntry> { url: url, priority: priority });
             });
         }
         else {
-            this.deque.push({url: urls, priority: priority});
+            this.queue.push(<QueueEntry> { url: url, priority: priority });
         }
     }
 
     /**
-     * Retrives the waiting times (in ms) for all templates.
+     * Retrieves the waiting times (in ms) for all templates.
      */
-    getWaitTimes() {
-        var that = this;
-        let waitTimes = {};
-        _.forEach(this.templates, function(template) {
-            let waitTime = (template.lastUsed - Date.now() + that._determineInterval(template)) || 0; // 0 for when the template was not used
+    public getWaitTimes(): { [name: string]: number } {
+        let that = this;
+        let waitTimes: { [name: string]: number } = {};
+        _.forEach(this.templates, (template: TemplateWrapper<T>) => {
+            let waitTime = (template.lastUsed - Date.now() + that.determineInterval(template)) || 0; // 0 for when the template was not used
             waitTimes[template.name] = Math.max(waitTime, 0);
         });
         return waitTimes;
@@ -152,12 +181,12 @@ class Scraper extends EventEmitter {
      *
      * Starts the whole process of looping through the queue.
      *
-     * @param options {Object} (optional)
+     * @param options
      */
-    start(options) {
+    public start(options?: ScraperOptions) {
         if (options) this.options = options;
 
-        setTimeout(this._processNextInQueue.bind(this), 0);
+        setTimeout(this.processNextInQueue.bind(this), 0);
     }
 
     /**
@@ -168,26 +197,27 @@ class Scraper extends EventEmitter {
      *
      * @private
      */
-    _processNextInQueue() {
-        let that = this;
+    private processNextInQueue(): void {
+        let that: Scraper<T> = this;
 
-        if (this.deque.length > 0) {
-            let queueEntry = this.deque.shift();
+        if (this.queue.size > 0) {
+            let queueEntry: QueueEntry = this.queue.first();
+            this.queue = this.queue.shift();
 
-            let nextURL = queueEntry.url;
-            let nextURLPriority = queueEntry.priority;
+            let nextURL: string = queueEntry.url;
+            let nextURLPriority: boolean = queueEntry.priority;
 
             /* Identify the proper callback to be used once the results come in. */
-            let matchingTemplate = _.find(this.templates, function(template) {
+            let matchingTemplate: TemplateWrapper<T> = <TemplateWrapper<T>> _.find(this.templates, (template: TemplateWrapper<T>): boolean => {
                 return template.matchesFormat(nextURL);
             });
 
-            if (matchingTemplate === undefined) {
+            if (!matchingTemplate) {
                 that.emit('unmatched', nextURL);
             }
             else {
 
-                let interval = that._determineInterval(matchingTemplate);
+                let interval = that.determineInterval(matchingTemplate);
 
                 /*
                  * Computing how much time is needed until the next request for this specific
@@ -203,13 +233,13 @@ class Scraper extends EventEmitter {
                  * after the interval set via templates or this.options.
                  */
                 let waitTime;
-                if (nextURLPriority === 0 && matchingTemplate.lastUsed) {
+                if (nextURLPriority === false && matchingTemplate.lastUsed) {
                     if ((matchingTemplate.lastUsed + interval) < Date.now())
                         waitTime = 0;
                     else
                         waitTime = (matchingTemplate.lastUsed + interval) - Date.now();
                 }
-                else if (nextURLPriority !== 0 && matchingTemplate.lastUsedPriority) {
+                else if (nextURLPriority === true && matchingTemplate.lastUsedPriority) {
                     if ((matchingTemplate.lastUsedPriority + interval) < Date.now())
                         waitTime = 0;
                     else
@@ -219,7 +249,7 @@ class Scraper extends EventEmitter {
                     waitTime = 0;
                 }
 
-                debug(matchingTemplate.name + ' - ' + matchingTemplate.lastUsed + ' - ' + waitTime);
+                scraperDebug(matchingTemplate.name + ' - ' + matchingTemplate.lastUsed + ' - ' + waitTime);
 
                 /* Keeping track of when the last request to a URL matching the current template
                  * has been made. This is possible to be a date in the future and is NOT precise
@@ -237,21 +267,21 @@ class Scraper extends EventEmitter {
                  *  we don't want priority links to start 100 requests at the same time.
                  */
                 matchingTemplate.lastUsed = Date.now() + waitTime;
-                if (nextURLPriority !== 0) matchingTemplate.lastUsedPriority = Date.now() + waitTime;
+                if (nextURLPriority === false) matchingTemplate.lastUsedPriority = Date.now() + waitTime;
 
-                debug('Next URL (' + waitTime + ' milliseconds wait time) is - ' + nextURL);
+                scraperDebug(`Next URL (${waitTime} milliseconds wait time) is - ${nextURL}`);
 
                 /*  */
-                if (nextURLPriority > 0) waitTime = 0;
+                if (nextURLPriority === true) waitTime = 0;
 
                 setTimeout(function () {
-                    that._makeRequest(nextURL, matchingTemplate);
+                    that.makeRequest(nextURL, matchingTemplate);
                 }, waitTime);
 
             }
         }
 
-        setTimeout(this._processNextInQueue.bind(this), 0);
+        setTimeout(this.processNextInQueue.bind(this), 0);
     }
 
     /**
@@ -261,14 +291,14 @@ class Scraper extends EventEmitter {
      * @param {Object} template - The corresponding template matching the URL provided.
      * @private
      */
-    _makeRequest(url, template) {
+    private makeRequest(url: string, template: TemplateWrapper<T>) {
         /* TODO: take care of other responses than 200. */
 
-        let that = this;
+        let that: Scraper<T> = this;
 
         request.get(url, function (error, response, body) {
             if (!error && response.statusCode === 200) {
-                debug('Got results for ' + url);
+                scraperDebug(`Got results for ${url}`);
                 let result = template.callback(url, body, cheerio.load(body));
                 that.emit('result', _.merge(result, { url: url, template: template }));
             }
@@ -281,7 +311,7 @@ class Scraper extends EventEmitter {
      * @param template
      * @private
      */
-    _determineInterval(template) {
+    private determineInterval(template) {
         if (this.options.interval)
             return this.options.interval;
         else if (this.options.maxInterval)

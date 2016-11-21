@@ -1,0 +1,17 @@
+{
+  "globalDependencies": {
+    "chai": "registry:dt/chai#3.4.0+20160601211834",
+    "cheerio": "registry:dt/cheerio#0.17.0+20160930124405",
+    "debug": "registry:dt/debug#0.0.0+20160317120654",
+    "form-data": "registry:dt/form-data#0.0.0+20160724024111",
+    "lodash": "registry:dt/lodash#4.14.0+20161004174455",
+    "mocha": "registry:dt/mocha#2.2.5+20160720003353",
+    "nock": "registry:dt/nock#8.0.0+20160909083304",
+    "node": "registry:dt/node#6.0.0+20161008175459",
+    "request": "registry:dt/request#0.0.0+20160726020908"
+  },
+  "dependencies": {
+    "immutable": "registry:npm/immutable#3.7.6+20160411060006",
+    "sinon": "registry:npm/sinon#1.16.0+20160723033700"
+  }
+}

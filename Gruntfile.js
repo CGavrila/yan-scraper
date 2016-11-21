@@ -2,17 +2,23 @@ module.exports = function(grunt) {
     require('load-grunt-tasks')(grunt);
 
     grunt.initConfig({
-        babel: {
-            options: {
-                sourceMap: true
+        ts: {
+            default: {
+                src: ['./src/index.ts'],
+                outDir: 'dist'
             },
-            dist: {
-                files: {
-                    'dist/index.js': 'src/index.js'
-                }
+            options: {
+                compiler: './node_modules/typescript/bin/tsc',
+                declaration: true,
+                target: 'es5'
+            },
+            tests: {
+                src: ['./src/test/test.ts'],
+                outDir: './dist/'
             }
         }
     });
 
-    grunt.registerTask('default', ['babel']);
+    grunt.loadNpmTasks('grunt-ts');
+    grunt.registerTask('default', ['ts']);
 };
